@@ -580,6 +580,12 @@ export class InteractiveMode {
 	// Header container that holds the built-in or custom header
 	private headerContainer: Container;
 
+	// Optional Aegis-style shell slots, supplied by extensions.
+	private topBarContainer: Container;
+	private sidebarContainer: Container;
+	private customTopBar: (Component & { dispose?(): void }) | undefined = undefined;
+	private customSidebar: (Component & { dispose?(): void }) | undefined = undefined;
+
 	// Built-in header (logo + keybinding hints + changelog)
 	private builtInHeader: Component | undefined = undefined;
 
@@ -633,6 +639,8 @@ export class InteractiveMode {
 		this.ui = createInteractiveTuiReference(() => this.renderer);
 		this.ui.setClearOnShrink(this.settingsManager.getClearOnShrink());
 		this.headerContainer = new Container();
+		this.topBarContainer = new Container();
+		this.sidebarContainer = new Container();
 		this.loadedResourcesContainer = new Container();
 		this.chatContainer = new Container();
 		this.documentContainer = new Container();
@@ -975,6 +983,10 @@ export class InteractiveMode {
 			editor: this.editorContainer,
 			widgetsBelow: this.widgetContainerBelow,
 			footer: this.footerContainer,
+			topBar: this.topBarContainer,
+			sidebar: this.sidebarContainer,
+			sidebarWidth: 32,
+			sidebarVisible: () => this.sidebarContainer.children.length > 0,
 			scrollbar: this.settingsManager.getFullscreenScrollbar(),
 			scrollbarTrackStyle: (text) => theme.fg("scrollbarTrack", text),
 			scrollbarThumbStyle: (text) => theme.fg("scrollbarThumb", text),
@@ -2463,6 +2475,8 @@ export class InteractiveMode {
 		this.clearExtensionTerminalInputListeners();
 		this.setExtensionFooter(undefined);
 		this.setExtensionHeader(undefined);
+		this.setExtensionTopBar(undefined);
+		this.setExtensionSidebar(undefined);
 		this.clearExtensionWidgets();
 		this.footerDataProvider.clearExtensionStatuses();
 		this.footer.invalidate();
@@ -2589,6 +2603,30 @@ export class InteractiveMode {
 		this.ui.requestRender();
 	}
 
+	/**
+	 * Set a fixed top bar above the transcript.
+	 */
+	private setExtensionTopBar(factory: ((tui: TUI, thm: Theme) => Component & { dispose?(): void }) | undefined): void {
+		if (this.customTopBar?.dispose) this.customTopBar.dispose();
+		this.topBarContainer.clear();
+		this.customTopBar = factory ? factory(this.ui, theme) : undefined;
+		if (this.customTopBar) this.topBarContainer.addChild(this.customTopBar);
+		this.ui.requestRender();
+	}
+
+	/**
+	 * Set a persistent right sidebar beside the transcript.
+	 */
+	private setExtensionSidebar(
+		factory: ((tui: TUI, thm: Theme) => Component & { dispose?(): void }) | undefined,
+	): void {
+		if (this.customSidebar?.dispose) this.customSidebar.dispose();
+		this.sidebarContainer.clear();
+		this.customSidebar = factory ? factory(this.ui, theme) : undefined;
+		if (this.customSidebar) this.sidebarContainer.addChild(this.customSidebar);
+		this.ui.requestRender();
+	}
+
 	private addExtensionTerminalInputListener(
 		handler: (data: string) => { consume?: boolean; data?: string } | undefined,
 	): () => void {
@@ -2650,6 +2688,8 @@ export class InteractiveMode {
 			setWidget: (key, content, options) => this.setExtensionWidget(key, content, options),
 			setFooter: (factory) => this.setExtensionFooter(factory),
 			setHeader: (factory) => this.setExtensionHeader(factory),
+			setTopBar: (factory) => this.setExtensionTopBar(factory),
+			setSidebar: (factory) => this.setExtensionSidebar(factory),
 			setTitle: (title) => this.ui.terminal.setTitle(title),
 			custom: (factory, options) => this.showExtensionCustom(factory, options),
 			pasteToEditor: (text) => this.editor.handleInput(`\x1b[200~${text}\x1b[201~`),

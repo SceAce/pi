@@ -207,6 +207,12 @@ export interface ExtensionUIContext {
 	/** Set a custom header component (shown at startup, above chat), or undefined to restore the built-in header. */
 	setHeader(factory: ((tui: TUI, theme: Theme) => Component & { dispose?(): void }) | undefined): void;
 
+	/** Set a fixed top bar above the transcript, or undefined to remove it. */
+	setTopBar(factory: ((tui: TUI, theme: Theme) => Component & { dispose?(): void }) | undefined): void;
+
+	/** Set a persistent right sidebar beside the transcript, or undefined to remove it. */
+	setSidebar(factory: ((tui: TUI, theme: Theme) => Component & { dispose?(): void }) | undefined): void;
+
 	/** Set the terminal window/tab title. */
 	setTitle(title: string): void;
 

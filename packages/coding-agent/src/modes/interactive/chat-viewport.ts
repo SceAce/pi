@@ -1,4 +1,4 @@
-import { type Component, ScrollView, type ScrollViewScrollbar, VStack } from "@earendil-works/pi-tui";
+import { type Component, HStack, ScrollView, type ScrollViewScrollbar, VStack } from "@earendil-works/pi-tui";
 
 export interface ChatViewportOptions {
 	readonly document: Component;
@@ -8,6 +8,10 @@ export interface ChatViewportOptions {
 	readonly footer: Component;
 	readonly widgetsAbove?: Component;
 	readonly widgetsBelow?: Component;
+	readonly topBar?: Component;
+	readonly sidebar?: Component;
+	readonly sidebarWidth?: number;
+	readonly sidebarVisible?: () => boolean;
 	readonly scrollbar?: ScrollViewScrollbar;
 	readonly scrollbarTrackStyle?: (text: string) => string;
 	readonly scrollbarThumbStyle?: (text: string) => string;
@@ -36,10 +40,27 @@ export function createChatViewport(options: ChatViewportOptions): ChatViewport {
 		...(options.widgetsBelow === undefined ? [] : [{ component: options.widgetsBelow, shrink: 1, minSize: 0 }]),
 		{ component: options.footer, shrink: 1, minSize: 0 },
 	]);
+	const transcriptArea =
+		options.sidebar === undefined
+			? transcript
+			: new HStack([
+					{ component: transcript, basis: 0, grow: 1, shrink: 1, minSize: 1 },
+					{
+						component: options.sidebar,
+						basis: options.sidebarWidth ?? 32,
+						grow: 0,
+						shrink: 0,
+						minSize: 0,
+						visible: (viewport) => viewport.width >= 100 && (options.sidebarVisible?.() ?? true),
+					},
+				]);
 	return {
 		transcript,
 		root: new VStack([
-			{ component: transcript, basis: 0, grow: 1, shrink: 1, minSize: 1 },
+			...(options.topBar === undefined
+				? []
+				: [{ component: options.topBar, basis: "auto" as const, grow: 0, shrink: 0, minSize: 0 }]),
+			{ component: transcriptArea, basis: 0, grow: 1, shrink: 1, minSize: 1 },
 			{ component: dock, basis: "auto", grow: 0, shrink: 1, minSize: 1 },
 		]),
 	};
